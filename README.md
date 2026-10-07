@@ -1,10 +1,9 @@
 # MyPg
-
-<img width="1919" height="897" alt="image" src="https://github.com/user-attachments/assets/4011867c-bc63-4286-92e2-9787fb88fc2a" />
-<img width="1919" height="900" alt="image" src="https://github.com/user-attachments/assets/2d98cf2f-e7db-4ca4-9ff6-af95493b0835" />
-
-
 PostgreSQL Backend-as-a-Service. Auto-generated REST API, auth, realtime, storage and admin dashboard.
+
+<img width="1919" height="900" alt="image" src="https://github.com/user-attachments/assets/2d98cf2f-e7db-4ca4-9ff6-af95493b0835" />
+<img width="1919" height="897" alt="image" src="https://github.com/user-attachments/assets/4011867c-bc63-4286-92e2-9787fb88fc2a" />
+
 
 ## Quick Start
 
