@@ -71,10 +71,10 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ proj
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight">{project?.name}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{project?.name}</h1>
             <Badge variant="outline" className="text-[11px] font-mono bg-muted/30">
               {telemetry?.database || project?.slug}
             </Badge>
@@ -84,21 +84,21 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ proj
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
             variant="outline"
-            className="h-8 text-xs gap-1.5"
+            className="h-8 text-xs gap-1.5 flex-1 sm:flex-initial"
             onClick={() => refetchTelemetry()}
           >
             <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" /> Refresh Stats
           </Button>
-          <Button asChild size="sm" variant="outline" className="h-8 text-xs gap-1.5">
+          <Button asChild size="sm" variant="outline" className="h-8 text-xs gap-1.5 flex-1 sm:flex-initial">
             <Link href={`/projects/${projectId}/logs`}>
               <Activity className="h-3.5 w-3.5 text-rose-500" /> Live Stream
             </Link>
           </Button>
-          <Button asChild size="sm" className="h-8 text-xs gap-1.5">
+          <Button asChild size="sm" className="h-8 text-xs gap-1.5 flex-1 sm:flex-initial">
             <Link href={`/projects/${projectId}/schema`}>
               <Terminal className="h-3.5 w-3.5" /> SQL Console
             </Link>
@@ -339,7 +339,7 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ proj
       </div>
 
       <Dialog open={errorModalOpen} onOpenChange={setErrorModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[85vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
               <AlertTriangle className="h-5 w-5 text-rose-500" />

@@ -5,5 +5,7 @@ export type AppEnv = {
     userId: string;
     role: string;
     authType: "apikey" | "user";
+    apiKeyId?: string;
+    apiKeyPermissions?: any;
   };
 };

@@ -42,22 +42,34 @@ export const api = {
     me: () => fetcher("/api/admin/auth/me"),
   },
   projects: {
-    list: () => fetcher("/api/admin/projects"),
+    list: (params?: { includeHidden?: boolean }) => {
+      const q = params?.includeHidden ? "?includeHidden=true" : "";
+      return fetcher(`/api/admin/projects${q}`);
+    },
+    sync: () => fetcher("/api/admin/projects/sync", { method: "POST" }),
     getDatabases: () => fetcher("/api/admin/databases"),
     create: (data: { name: string; slug: string; dbConnectionString?: string; databaseName?: string }) =>
       fetcher("/api/admin/projects", { method: "POST", body: JSON.stringify(data) }),
     get: (id: string) => fetcher(`/api/admin/projects/${id}`),
-    update: (id: string, data: Partial<{ name: string; slug: string; dbConnectionString: string }>) =>
+    update: (id: string, data: Partial<{ name: string; slug: string; dbConnectionString: string; isHidden: boolean }>) =>
       fetcher(`/api/admin/projects/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    hide: (id: string) =>
+      fetcher(`/api/admin/projects/${id}/hide`, { method: "POST" }),
+    unhide: (id: string) =>
+      fetcher(`/api/admin/projects/${id}/unhide`, { method: "POST" }),
     delete: (id: string) => fetcher(`/api/admin/projects/${id}`, { method: "DELETE" }),
     telemetry: (id: string) => fetcher(`/api/admin/projects/${id}/telemetry`),
   },
   apiKeys: {
     list: (projectId: string) => fetcher(`/api/admin/projects/${projectId}/keys`),
-    create: (projectId: string, data: { name: string; permissions?: object }) =>
+    create: (projectId: string, data: { name: string; environment?: string; type?: string; permissions?: object }) =>
       fetcher(`/api/admin/projects/${projectId}/keys`, { method: "POST", body: JSON.stringify(data) }),
+    update: (projectId: string, keyId: string, data: { name?: string; isActive?: boolean; environment?: string; type?: string; permissions?: object }) =>
+      fetcher(`/api/admin/projects/${projectId}/keys/${keyId}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (projectId: string, keyId: string) =>
       fetcher(`/api/admin/projects/${projectId}/keys/${keyId}`, { method: "DELETE" }),
+    stats: (projectId: string, keyId: string) =>
+      fetcher(`/api/admin/projects/${projectId}/keys/${keyId}/stats`),
   },
   collections: {
     list: (projectId: string) => fetcher(`/api/admin/projects/${projectId}/collections`),

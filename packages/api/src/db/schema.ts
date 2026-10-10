@@ -15,6 +15,7 @@ export const projects = pgTable("mypg_projects", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   dbConnectionString: text("db_connection_string"),
+  isHidden: boolean("is_hidden").default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
@@ -23,9 +24,13 @@ export const apiKeys = pgTable("mypg_api_keys", {
   id: uuid("id").primaryKey().defaultRandom(),
   projectId: uuid("project_id").references(() => projects.id).notNull(),
   name: text("name").notNull(),
+  environment: text("environment").default("production"),
+  type: text("type").default("secret"),
   keyHash: text("key_hash").notNull().unique(),
   keyPrefix: text("key_prefix").notNull(),
   permissions: jsonb("permissions"),
+  isActive: boolean("is_active").default(true),
+  totalRequests: bigint("total_requests", { mode: "number" }).default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
 });
@@ -66,6 +71,7 @@ export const users = pgTable("mypg_users", {
 export const requestLogs = pgTable("mypg_request_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
   projectId: uuid("project_id").references(() => projects.id),
+  apiKeyId: uuid("api_key_id").references(() => apiKeys.id),
   method: text("method").notNull(),
   path: text("path").notNull(),
   statusCode: integer("status_code").notNull(),

@@ -34,9 +34,30 @@ export default function CollectionDataPage({
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const [page, setPage] = useState(1);
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  const [showColumnFilters, setShowColumnFilters] = useState(false);
+
+  const queryParams = useMemo(() => {
+    const params: Record<string, string> = { page: String(page), perPage: "50" };
+    if (sortField) {
+      params.sort = `${sortField}:${sortOrder}`;
+    }
+    const filterObj: Record<string, any> = {};
+    for (const [k, v] of Object.entries(columnFilters)) {
+      if (v) filterObj[k] = { like: `%${v}%` };
+    }
+    if (Object.keys(filterObj).length > 0) {
+      params.filter = JSON.stringify(filterObj);
+    }
+    return params;
+  }, [page, sortField, sortOrder, columnFilters]);
+
   const { data: records, isLoading, refetch } = useQuery({
-    queryKey: ["data", projectId, name],
-    queryFn: () => api.data.list(projectId, name),
+    queryKey: ["data", projectId, name, queryParams],
+    queryFn: () => api.data.list(projectId, name, queryParams),
   });
 
   const { data: tables } = useQuery({
@@ -51,12 +72,6 @@ export default function CollectionDataPage({
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [editingRecord, setEditingRecord] = useState<any | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-
-  const [sortField, setSortField] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
-  const [globalSearch, setGlobalSearch] = useState("");
-  const [showColumnFilters, setShowColumnFilters] = useState(false);
 
   const cols: string[] =
     schemaColumns.length > 0
@@ -76,6 +91,7 @@ export default function CollectionDataPage({
       setSortField(field);
       setSortOrder("asc");
     }
+    setPage(1);
   };
 
   const handleColumnFilterChange = (col: string, val: string) => {
@@ -85,60 +101,16 @@ export default function CollectionDataPage({
       else next[col] = val;
       return next;
     });
+    setPage(1);
   };
 
   const clearAllFilters = () => {
     setColumnFilters({});
-    setGlobalSearch("");
     setSortField(null);
+    setPage(1);
   };
 
-  const filteredAndSortedRecords = useMemo(() => {
-    if (!records) return [];
-    let result = [...records];
-
-    if (globalSearch.trim()) {
-      const q = globalSearch.toLowerCase().trim();
-      result = result.filter((r) =>
-        Object.values(r).some((v) =>
-          String(v ?? "").toLowerCase().includes(q)
-        )
-      );
-    }
-
-    const activeFilterEntries = Object.entries(columnFilters);
-    if (activeFilterEntries.length > 0) {
-      result = result.filter((r) =>
-        activeFilterEntries.every(([col, filterVal]) => {
-          const val = r[col];
-          return String(val ?? "").toLowerCase().includes(filterVal.toLowerCase().trim());
-        })
-      );
-    }
-
-    if (sortField) {
-      result.sort((a, b) => {
-        const valA = a[sortField];
-        const valB = b[sortField];
-
-        if (valA === valB) return 0;
-        if (valA === null || valA === undefined) return 1;
-        if (valB === null || valB === undefined) return -1;
-
-        if (typeof valA === "number" && typeof valB === "number") {
-          return sortOrder === "asc" ? valA - valB : valB - valA;
-        }
-
-        const strA = String(valA).toLowerCase();
-        const strB = String(valB).toLowerCase();
-        if (strA < strB) return sortOrder === "asc" ? -1 : 1;
-        if (strA > strB) return sortOrder === "asc" ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  }, [records, globalSearch, columnFilters, sortField, sortOrder]);
+  const filteredAndSortedRecords = records || [];
 
   const handleFieldChange = (key: string, val: string) => {
     setFormData((prev) => ({ ...prev, [key]: val }));
@@ -221,11 +193,11 @@ export default function CollectionDataPage({
     setFormData(initial);
   };
 
-  const hasActiveFilters = globalSearch !== "" || Object.keys(columnFilters).length > 0 || sortField !== null;
+  const hasActiveFilters = Object.keys(columnFilters).length > 0 || sortField !== null;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="sm" className="h-8">
             <Link href={`/projects/${projectId}/collections`}>
@@ -242,25 +214,7 @@ export default function CollectionDataPage({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative w-64">
-            <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
-            <Input
-              placeholder="Search in all columns..."
-              value={globalSearch}
-              onChange={(e) => setGlobalSearch(e.target.value)}
-              className="h-8 pl-8 pr-7 text-xs"
-            />
-            {globalSearch && (
-              <button
-                onClick={() => setGlobalSearch("")}
-                className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={showColumnFilters ? "secondary" : "outline"}
             size="sm"
@@ -287,7 +241,7 @@ export default function CollectionDataPage({
                 <Plus className="mr-1.5 h-3.5 w-3.5" /> New Record
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+            <DialogContent className="w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto p-4 sm:p-6">
               <DialogHeader>
                 <DialogTitle>Insert Record into {name}</DialogTitle>
               </DialogHeader>
@@ -317,7 +271,7 @@ export default function CollectionDataPage({
           </Dialog>
 
           <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
-            <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+            <DialogContent className="w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto p-4 sm:p-6">
               <DialogHeader>
                 <DialogTitle>Edit Record ({editingRecord?.id})</DialogTitle>
               </DialogHeader>
@@ -449,6 +403,31 @@ export default function CollectionDataPage({
             </Table>
           </div>
         </CardContent>
+        <div className="border-t p-3 flex items-center justify-between bg-muted/20">
+          <span className="text-xs text-muted-foreground">
+            Page {page}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setPage(p => p + 1)}
+              disabled={!records || records.length < 50}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
       </Card>
     </div>
   );

@@ -137,7 +137,7 @@ export default function SchemaPage({ params }: { params: Promise<{ projectId: st
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b">
         <div>
           <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
             <Database className="h-5 w-5 text-primary" /> Schema & Query Editor
@@ -148,11 +148,11 @@ export default function SchemaPage({ params }: { params: Promise<{ projectId: st
         </div>
         <Dialog open={createTableOpen} onOpenChange={setCreateTableOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="h-8 text-xs gap-1.5">
+            <Button size="sm" className="h-8 text-xs gap-1.5 w-full sm:w-auto">
               <Plus className="h-3.5 w-3.5" /> Create Table
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Create New PostgreSQL Table</DialogTitle>
             </DialogHeader>
@@ -199,13 +199,31 @@ export default function SchemaPage({ params }: { params: Promise<{ projectId: st
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="tables" className="flex flex-col md:flex-row gap-6 pt-2">
-          <div className="w-full md:w-64 space-y-1.5">
-            <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider px-1">
-              Tables ({tables?.length || 0})
-            </h3>
+        <TabsContent value="tables" className="flex flex-col md:flex-row gap-4 md:gap-6 pt-2">
+          <div className="w-full md:w-64 space-y-2 shrink-0">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
+                Tables ({tables?.length || 0})
+              </h3>
+            </div>
+
+            <div className="md:hidden">
+              <Select value={selectedTable || ""} onValueChange={setSelectedTable}>
+                <SelectTrigger className="text-xs h-9 w-full bg-background">
+                  <SelectValue placeholder="Choose a table..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {tables?.map((t: any) => (
+                    <SelectItem key={t.name} value={t.name}>
+                      {t.name} ({t.columns?.length || 0} cols)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {isLoading && <div className="text-xs text-muted-foreground p-2">Loading tables...</div>}
-            <div className="space-y-1">
+            <div className="hidden md:block space-y-1">
               {tables?.map((t: any) => (
                 <div
                   key={t.name}
@@ -231,24 +249,24 @@ export default function SchemaPage({ params }: { params: Promise<{ projectId: st
             </div>
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {selectedTable ? (
               <Card className="border shadow-xs overflow-hidden rounded-xl">
-                <CardHeader className="p-4 border-b flex flex-row justify-between items-center space-y-0 bg-muted/20">
+                <CardHeader className="p-3.5 sm:p-4 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-muted/20">
                   <div>
                     <CardTitle className="text-base font-bold flex items-center gap-2 font-mono">
                       <TableIcon className="h-4 w-4 text-primary" /> {selectedTable}
                     </CardTitle>
                     <p className="text-xs text-muted-foreground mt-0.5">{currentTable?.columns?.length || 0} column definitions</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
                     <Dialog open={addColumnOpen} onOpenChange={setAddColumnOpen}>
                       <DialogTrigger asChild>
                         <Button size="sm" className="h-8 text-xs gap-1">
                           <Plus className="h-3.5 w-3.5" /> Add Column
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto p-4 sm:p-6">
                         <DialogHeader>
                           <DialogTitle>Add Column to {selectedTable}</DialogTitle>
                         </DialogHeader>
@@ -296,37 +314,39 @@ export default function SchemaPage({ params }: { params: Promise<{ projectId: st
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <UITable>
-                    <TableHeader className="bg-muted/40">
-                      <TableRow>
-                        <TableHead className="text-xs">Column Name</TableHead>
-                        <TableHead className="text-xs">Postgres Type</TableHead>
-                        <TableHead className="text-xs">Nullable</TableHead>
-                        <TableHead className="text-right text-xs">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {currentTable?.columns?.map((c: any) => (
-                        <TableRow key={c.name} className="hover:bg-muted/30">
-                          <TableCell className="font-mono text-xs font-semibold py-2.5">{c.name}</TableCell>
-                          <TableCell><span className="text-[11px] bg-muted/80 border px-1.5 py-0.5 rounded font-mono">{c.type}</span></TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{c.nullable ? "Yes" : "No"}</TableCell>
-                          <TableCell className="text-right py-2">
-                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive/80 hover:text-destructive hover:bg-destructive/10" onClick={() => handleDropColumn(c.name)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <UITable>
+                      <TableHeader className="bg-muted/40">
+                        <TableRow>
+                          <TableHead className="text-xs">Column Name</TableHead>
+                          <TableHead className="text-xs">Postgres Type</TableHead>
+                          <TableHead className="text-xs">Nullable</TableHead>
+                          <TableHead className="text-right text-xs">Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </UITable>
+                      </TableHeader>
+                      <TableBody>
+                        {currentTable?.columns?.map((c: any) => (
+                          <TableRow key={c.name} className="hover:bg-muted/30">
+                            <TableCell className="font-mono text-xs font-semibold py-2.5">{c.name}</TableCell>
+                            <TableCell><span className="text-[11px] bg-muted/80 border px-1.5 py-0.5 rounded font-mono">{c.type}</span></TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{c.nullable ? "Yes" : "No"}</TableCell>
+                            <TableCell className="text-right py-2">
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive/80 hover:text-destructive hover:bg-destructive/10" onClick={() => handleDropColumn(c.name)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </UITable>
+                  </div>
                 </CardContent>
               </Card>
             ) : (
               <div className="flex flex-col items-center justify-center h-64 text-muted-foreground border rounded-xl border-dashed p-6 text-center">
                 <TableIcon className="h-8 w-8 mb-2 opacity-40 text-primary" />
                 <p className="text-sm font-medium text-foreground">Select a table</p>
-                <p className="text-xs text-muted-foreground mt-1">Choose a table on the left to view and modify columns, or create a new table.</p>
+                <p className="text-xs text-muted-foreground mt-1">Choose a table above or on the left to view and modify columns, or create a new table.</p>
               </div>
             )}
           </div>
@@ -334,11 +354,11 @@ export default function SchemaPage({ params }: { params: Promise<{ projectId: st
 
         <TabsContent value="sql" className="pt-2">
           <Card className="border shadow-xs overflow-hidden rounded-xl">
-            <CardHeader className="p-4 border-b flex flex-row items-center justify-between bg-muted/20">
+            <CardHeader className="p-3.5 sm:p-4 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-muted/20">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Code2 className="h-4 w-4 text-emerald-500" /> Direct SQL Query Runner
               </CardTitle>
-              <Button size="sm" onClick={handleRunSQL} disabled={sqlRunning} className="h-8 text-xs gap-1.5">
+              <Button size="sm" onClick={handleRunSQL} disabled={sqlRunning} className="h-8 text-xs gap-1.5 w-full sm:w-auto">
                 <Play className="h-3.5 w-3.5" /> {sqlRunning ? "Executing..." : "Execute Query"}
               </Button>
             </CardHeader>

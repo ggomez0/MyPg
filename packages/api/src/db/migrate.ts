@@ -18,21 +18,36 @@ export async function runMigrations() {
       name TEXT NOT NULL,
       slug TEXT UNIQUE NOT NULL,
       db_connection_string TEXT,
+      is_hidden BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+  `;
+  await sql`
+    ALTER TABLE mypg_projects ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT FALSE;
   `;
   await sql`
     CREATE TABLE IF NOT EXISTS mypg_api_keys (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       project_id UUID REFERENCES mypg_projects(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
+      environment TEXT DEFAULT 'production',
+      type TEXT DEFAULT 'secret',
       key_hash TEXT UNIQUE NOT NULL,
       key_prefix TEXT NOT NULL,
       permissions JSONB,
+      is_active BOOLEAN DEFAULT TRUE,
+      total_requests BIGINT DEFAULT 0,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       last_used_at TIMESTAMPTZ
     );
+  `;
+  await sql`
+    ALTER TABLE mypg_api_keys 
+      ADD COLUMN IF NOT EXISTS environment TEXT DEFAULT 'production',
+      ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'secret',
+      ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE,
+      ADD COLUMN IF NOT EXISTS total_requests BIGINT DEFAULT 0;
   `;
   await sql`
     CREATE TABLE IF NOT EXISTS mypg_collections (
@@ -86,6 +101,9 @@ export async function runMigrations() {
       user_id UUID,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+  `;
+  await sql`
+    ALTER TABLE mypg_request_logs ADD COLUMN IF NOT EXISTS api_key_id UUID REFERENCES mypg_api_keys(id) ON DELETE SET NULL;
   `;
   await sql`
     CREATE TABLE IF NOT EXISTS mypg_storage_files (

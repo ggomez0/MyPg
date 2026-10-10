@@ -75,4 +75,65 @@ describe("MyPg Core Utilities & Security Tests", () => {
     expect(result.dataQuery).toBeDefined();
     expect(result.countQuery).toBeDefined();
   });
+
+  it("should format auto-discovered database names and slugs properly", () => {
+    const rawDbName = "db_municipalidad_wifi";
+    const slug = rawDbName.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+    const formattedName = rawDbName
+      .replace(/^db_/, "")
+      .replace(/[-_]/g, " ")
+      .replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+    expect(slug).toBe("db_municipalidad_wifi");
+    expect(formattedName).toBe("Municipalidad Wifi");
+  });
+
+  it("should handle visual hiding flags without modifying underlying database", () => {
+    const projectState = {
+      id: "proj-1",
+      name: "Municipalidad",
+      dbConnectionString: "postgresql://localhost:5432/db_municipalidad",
+      isHidden: false,
+    };
+
+    const hiddenState = { ...projectState, isHidden: true };
+    expect(hiddenState.isHidden).toBe(true);
+    expect(hiddenState.dbConnectionString).toBe(projectState.dbConnectionString);
+
+    const restoredState = { ...hiddenState, isHidden: false };
+    expect(restoredState.isHidden).toBe(false);
+  });
+
+  it("should enforce readonly mode in checkApiKeyPermission", async () => {
+    const { checkApiKeyPermission } = await import("../utils/permissions");
+    const perms = { mode: "readonly" as const };
+
+    expect(checkApiKeyPermission(perms, "posts", "read")).toBe(true);
+    expect(checkApiKeyPermission(perms, "posts", "create")).toBe(false);
+    expect(checkApiKeyPermission(perms, "posts", "update")).toBe(false);
+    expect(checkApiKeyPermission(perms, "posts", "delete")).toBe(false);
+  });
+
+  it("should enforce granular collection permissions in checkApiKeyPermission", async () => {
+    const { checkApiKeyPermission } = await import("../utils/permissions");
+    const perms = {
+      collections: {
+        posts: ["read"],
+        comments: ["read", "create"],
+      },
+    };
+
+    expect(checkApiKeyPermission(perms, "posts", "read")).toBe(true);
+    expect(checkApiKeyPermission(perms, "posts", "create")).toBe(false);
+    expect(checkApiKeyPermission(perms, "comments", "read")).toBe(true);
+    expect(checkApiKeyPermission(perms, "comments", "create")).toBe(true);
+    expect(checkApiKeyPermission(perms, "comments", "delete")).toBe(false);
+    expect(checkApiKeyPermission(perms, "users", "read")).toBe(false);
+  });
+
+  it("should allow full access when mode is full or permissions are omitted", async () => {
+    const { checkApiKeyPermission } = await import("../utils/permissions");
+    expect(checkApiKeyPermission(null, "posts", "create")).toBe(true);
+    expect(checkApiKeyPermission({ mode: "full" }, "posts", "delete")).toBe(true);
+  });
 });

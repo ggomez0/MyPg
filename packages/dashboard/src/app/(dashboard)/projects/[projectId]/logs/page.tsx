@@ -107,7 +107,7 @@ export default function LogsPage({ params }: { params: Promise<{ projectId: stri
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-1 border-b">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b">
         <div>
           <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
             <Terminal className="h-5 w-5 text-primary" /> Live PostgreSQL Query Console
@@ -150,19 +150,19 @@ export default function LogsPage({ params }: { params: Promise<{ projectId: stri
       </div>
 
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
-          <TabsList className="bg-muted/50 p-1 rounded-lg">
-            <TabsTrigger value="postgres" className="text-xs gap-1.5 rounded-md data-[state=active]:bg-background">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-3">
+          <TabsList className="bg-muted/50 p-1 rounded-lg w-full sm:w-auto">
+            <TabsTrigger value="postgres" className="text-xs gap-1.5 rounded-md data-[state=active]:bg-background flex-1 sm:flex-initial">
               <Database className="h-3.5 w-3.5 text-blue-500" /> PostgreSQL Engine ({filteredPgLogs.length})
             </TabsTrigger>
-            <TabsTrigger value="api" className="text-xs gap-1.5 rounded-md data-[state=active]:bg-background">
+            <TabsTrigger value="api" className="text-xs gap-1.5 rounded-md data-[state=active]:bg-background flex-1 sm:flex-initial">
               <Layers className="h-3.5 w-3.5 text-amber-500" /> HTTP Api Logs
             </TabsTrigger>
           </TabsList>
 
           {activeTab === "postgres" && (
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative w-64">
+            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+              <div className="relative flex-1 sm:w-60 min-w-[150px]">
                 <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
                 <Input
                   placeholder="Filter query text, table, IP..."
@@ -181,7 +181,7 @@ export default function LogsPage({ params }: { params: Promise<{ projectId: stri
               </div>
 
               <Select value={selectedDb} onValueChange={setSelectedDb}>
-                <SelectTrigger className="w-40 h-8 text-xs bg-background">
+                <SelectTrigger className="w-full sm:w-36 h-8 text-xs bg-background flex-1 sm:flex-initial">
                   <SelectValue placeholder="Database" />
                 </SelectTrigger>
                 <SelectContent>
@@ -195,7 +195,7 @@ export default function LogsPage({ params }: { params: Promise<{ projectId: stri
               </Select>
 
               <Select value={actionFilter} onValueChange={setActionFilter}>
-                <SelectTrigger className="w-32 h-8 text-xs bg-background">
+                <SelectTrigger className="w-full sm:w-32 h-8 text-xs bg-background flex-1 sm:flex-initial">
                   <SelectValue placeholder="Action" />
                 </SelectTrigger>
                 <SelectContent>
@@ -215,14 +215,14 @@ export default function LogsPage({ params }: { params: Promise<{ projectId: stri
 
         <TabsContent value="postgres" className="mt-0">
           <div className="rounded-xl border bg-zinc-950 text-zinc-100 font-mono text-xs overflow-hidden shadow-sm">
-            <div className="border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between text-zinc-400 text-[11px] bg-zinc-900/60">
-              <div className="flex items-center gap-4">
-                <span className="w-16">TYPE</span>
-                <span className="w-28">DATABASE</span>
-                <span>QUERY STREAM</span>
+            <div className="border-b border-zinc-800/80 px-3 sm:px-4 py-2.5 flex items-center justify-between text-zinc-400 text-[11px] bg-zinc-900/60">
+              <div className="flex items-center gap-2 sm:gap-4 truncate">
+                <span className="w-14 sm:w-16">TYPE</span>
+                <span className="w-20 sm:w-28 truncate">DATABASE</span>
+                <span className="hidden sm:inline">QUERY STREAM</span>
               </div>
-              <div className="flex items-center gap-6">
-                <span>LATENCY</span>
+              <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+                <span className="hidden sm:inline">LATENCY</span>
                 <span>TIME</span>
               </div>
             </div>
@@ -239,11 +239,11 @@ export default function LogsPage({ params }: { params: Promise<{ projectId: stri
                     <div
                       key={log.pid ? `${log.pid}-${idx}` : idx}
                       onClick={() => setSelectedLog(log)}
-                      className="px-4 py-2 hover:bg-zinc-900/80 cursor-pointer flex items-center justify-between gap-3 group transition-colors"
+                      className="px-3 sm:px-4 py-2 hover:bg-zinc-900/80 cursor-pointer flex items-center justify-between gap-2 sm:gap-3 group transition-colors"
                     >
-                      <div className="flex items-center gap-3 truncate min-w-0 flex-1">
-                        <div className="w-16 shrink-0">{getActionBadge(log.action)}</div>
-                        <span className="w-28 shrink-0 text-emerald-400/90 font-semibold truncate text-[11px]">
+                      <div className="flex items-center gap-2 sm:gap-3 truncate min-w-0 flex-1">
+                        <div className="w-14 sm:w-16 shrink-0">{getActionBadge(log.action)}</div>
+                        <span className="w-20 sm:w-28 shrink-0 text-emerald-400/90 font-semibold truncate text-[11px]">
                           {log.datname}
                         </span>
                         <span className="text-zinc-300 truncate text-[11px] group-hover:text-white transition-colors">
@@ -251,11 +251,11 @@ export default function LogsPage({ params }: { params: Promise<{ projectId: stri
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-4 shrink-0 text-[11px] text-zinc-500">
-                        <span className="w-16 text-right font-mono text-zinc-400">
+                      <div className="flex items-center gap-2 sm:gap-4 shrink-0 text-[11px] text-zinc-500">
+                        <span className="hidden sm:inline-block w-16 text-right font-mono text-zinc-400">
                           {log.duration_ms !== null && log.duration_ms !== undefined ? `${log.duration_ms}ms` : "-"}
                         </span>
-                        <span className="w-20 text-right text-zinc-500 truncate text-[10px]">
+                        <span className="w-14 sm:w-20 text-right text-zinc-500 truncate text-[10px]">
                           {log.timestamp ? log.timestamp.split(" ")[1]?.slice(0, 8) || "live" : "live"}
                         </span>
                       </div>
@@ -305,7 +305,7 @@ export default function LogsPage({ params }: { params: Promise<{ projectId: stri
       </Tabs>
 
       <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="flex flex-row items-center justify-between pr-4">
             <DialogTitle className="flex items-center gap-2 text-base">
               <Code2 className="h-5 w-5 text-primary" /> Query Inspector ({selectedLog?.datname})
@@ -314,7 +314,7 @@ export default function LogsPage({ params }: { params: Promise<{ projectId: stri
 
           {selectedLog && (
             <div className="space-y-4 text-xs font-mono mt-2">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 bg-muted/40 rounded-xl border">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-muted/40 rounded-xl border">
                 <div>
                   <span className="text-muted-foreground block font-sans text-[11px]">Database</span>
                   <span className="font-bold text-foreground text-xs">{selectedLog.datname}</span>

@@ -36,15 +36,26 @@ export async function apiAuth(c: Context<AppEnv>, next: Next) {
     if (!keyRecord) {
       return c.json({ error: "Unauthorized" }, 401);
     }
+    if (keyRecord.isActive === false) {
+      return c.json({ error: "Forbidden: API Key is disabled" }, 403);
+    }
     const { verifyPassword } = await import("../utils/crypto");
     const isValid = await verifyPassword(keyRecord.keyHash, apiKey);
     if (!isValid) {
       return c.json({ error: "Unauthorized" }, 401);
     }
-    await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, keyRecord.id));
+    await db
+      .update(apiKeys)
+      .set({
+        lastUsedAt: new Date(),
+        totalRequests: (keyRecord.totalRequests || 0) + 1,
+      })
+      .where(eq(apiKeys.id, keyRecord.id));
     c.set("projectId", keyRecord.projectId);
     c.set("authType", "apikey");
-    c.set("role", "admin");
+    c.set("apiKeyId", keyRecord.id);
+    c.set("apiKeyPermissions", keyRecord.permissions);
+    c.set("role", keyRecord.type === "public" ? "viewer" : "admin");
     return await next();
   }
 

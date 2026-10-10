@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { db, getDataDb } from "../db";
 import { config } from "../config";
-import { projects, apiKeys } from "../db/schema";
+import { projects, apiKeys, requestLogs } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
 import { z } from "zod";
@@ -12,7 +12,78 @@ import * as fs from "fs";
 const adminRouter = new Hono();
 adminRouter.use("*", adminAuth);
 
+async function syncDiscoveredDatabases() {
+  try {
+    const rawSql = getDataDb();
+    const dbs = await rawSql`
+      SELECT datname as name 
+      FROM pg_database 
+      WHERE datistemplate = false 
+        AND datname NOT IN ('postgres', 'mypg_internal')
+      ORDER BY datname;
+    `;
+    const existingProjects = await db.select().from(projects);
+    const existingDbNames = new Set<string>();
+    for (const p of existingProjects) {
+      if (p.dbConnectionString) {
+        try {
+          const url = new URL(p.dbConnectionString);
+          const dbName = url.pathname.replace(/^\//, "");
+          if (dbName) existingDbNames.add(dbName.toLowerCase());
+        } catch {}
+      } else {
+        try {
+          const defaultUrl = new URL(config.DATA_DATABASE_URL);
+          const defaultDb = defaultUrl.pathname.replace(/^\//, "");
+          if (defaultDb) existingDbNames.add(defaultDb.toLowerCase());
+        } catch {}
+      }
+    }
+
+    for (const dbItem of dbs) {
+      const dbName = dbItem.name;
+      if (!existingDbNames.has(dbName.toLowerCase())) {
+        const base = new URL(config.DATA_DATABASE_URL);
+        base.pathname = `/${dbName}`;
+        const connStr = base.toString();
+
+        let baseSlug = dbName.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+        let slug = baseSlug;
+        let counter = 1;
+        while (existingProjects.some((p) => p.slug === slug)) {
+          slug = `${baseSlug}-${counter++}`;
+        }
+
+        const formattedName = dbName
+          .replace(/^db_/, "")
+          .replace(/[-_]/g, " ")
+          .replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+        const [created] = await db
+          .insert(projects)
+          .values({
+            name: formattedName || dbName,
+            slug,
+            dbConnectionString: connStr,
+            isHidden: false,
+          })
+          .returning();
+
+        existingProjects.push(created);
+        existingDbNames.add(dbName.toLowerCase());
+      }
+    }
+  } catch {}
+}
+
 adminRouter.get("/projects", async (c) => {
+  await syncDiscoveredDatabases();
+  const data = await db.select().from(projects);
+  return c.json({ data });
+});
+
+adminRouter.post("/projects/sync", async (c) => {
+  await syncDiscoveredDatabases();
   const data = await db.select().from(projects);
   return c.json({ data });
 });
@@ -90,9 +161,26 @@ adminRouter.get("/projects/:id", async (c) => {
 
 adminRouter.patch("/projects/:id", async (c) => {
   const id = c.req.param("id");
-  const schema = z.object({ name: z.string().optional(), slug: z.string().optional(), dbConnectionString: z.string().optional() });
+  const schema = z.object({
+    name: z.string().optional(),
+    slug: z.string().optional(),
+    dbConnectionString: z.string().optional(),
+    isHidden: z.boolean().optional(),
+  });
   const body = schema.parse(await c.req.json());
   const [data] = await db.update(projects).set(body).where(eq(projects.id, id)).returning();
+  return c.json({ data });
+});
+
+adminRouter.post("/projects/:id/hide", async (c) => {
+  const id = c.req.param("id");
+  const [data] = await db.update(projects).set({ isHidden: true }).where(eq(projects.id, id)).returning();
+  return c.json({ data });
+});
+
+adminRouter.post("/projects/:id/unhide", async (c) => {
+  const id = c.req.param("id");
+  const [data] = await db.update(projects).set({ isHidden: false }).where(eq(projects.id, id)).returning();
   return c.json({ data });
 });
 
@@ -110,18 +198,56 @@ adminRouter.get("/projects/:projectId/keys", async (c) => {
 
 adminRouter.post("/projects/:projectId/keys", async (c) => {
   const projectId = c.req.param("projectId");
-  const schema = z.object({ name: z.string(), permissions: z.any().optional() });
+  const schema = z.object({
+    name: z.string(),
+    environment: z.string().optional(),
+    type: z.string().optional(),
+    permissions: z.any().optional(),
+  });
   const body = schema.parse(await c.req.json());
   const { prefix, secret, key } = generateApiKey();
   const keyHash = await hashPassword(key);
-  const [data] = await db.insert(apiKeys).values({ projectId, name: body.name, keyHash, keyPrefix: prefix, permissions: body.permissions }).returning();
+  const [data] = await db
+    .insert(apiKeys)
+    .values({
+      projectId,
+      name: body.name,
+      environment: body.environment || "production",
+      type: body.type || "secret",
+      keyHash,
+      keyPrefix: prefix,
+      permissions: body.permissions || (body.type === "public" ? { mode: "readonly" } : { mode: "full" }),
+      isActive: true,
+      totalRequests: 0,
+    })
+    .returning();
   return c.json({ data: { ...data, key } });
+});
+
+adminRouter.patch("/projects/:projectId/keys/:keyId", async (c) => {
+  const keyId = c.req.param("keyId");
+  const schema = z.object({
+    name: z.string().optional(),
+    environment: z.string().optional(),
+    type: z.string().optional(),
+    isActive: z.boolean().optional(),
+    permissions: z.any().optional(),
+  });
+  const body = schema.parse(await c.req.json());
+  const [data] = await db.update(apiKeys).set(body).where(eq(apiKeys.id, keyId)).returning();
+  return c.json({ data });
 });
 
 adminRouter.delete("/projects/:projectId/keys/:keyId", async (c) => {
   const keyId = c.req.param("keyId");
   await db.delete(apiKeys).where(eq(apiKeys.id, keyId));
   return c.json({ data: { success: true } });
+});
+
+adminRouter.get("/projects/:projectId/keys/:keyId/stats", async (c) => {
+  const keyId = c.req.param("keyId");
+  const logs = await db.select().from(requestLogs).where(eq(requestLogs.apiKeyId, keyId)).limit(50);
+  return c.json({ data: logs });
 });
 
 adminRouter.get("/projects/:projectId/schema/tables", async (c) => {

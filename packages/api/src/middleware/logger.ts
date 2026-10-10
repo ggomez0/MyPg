@@ -8,9 +8,11 @@ export async function requestLogger(c: Context, next: Next) {
   const durationMs = Date.now() - start;
   const projectId = c.get("projectId") || null;
   const userId = c.get("userId") || null;
+  const apiKeyId = c.get("apiKeyId") || null;
   try {
     await db.insert(requestLogs).values({
       projectId,
+      apiKeyId,
       method: c.req.method,
       path: c.req.path,
       statusCode: c.res.status,

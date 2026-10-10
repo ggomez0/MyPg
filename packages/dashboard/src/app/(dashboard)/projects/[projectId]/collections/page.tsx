@@ -70,7 +70,7 @@ export default function CollectionsPage({ params }: { params: Promise<{ projectI
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b">
         <div>
           <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
             <TableIcon className="h-5 w-5 text-primary" /> Collections & API Tables
@@ -79,7 +79,7 @@ export default function CollectionsPage({ params }: { params: Promise<{ projectI
             Tables detected in your database exposed as REST APIs with Row Level Security (RLS)
           </p>
         </div>
-        <Button asChild size="sm" className="h-8 text-xs gap-1.5">
+        <Button asChild size="sm" className="h-8 text-xs gap-1.5 w-full sm:w-auto">
           <Link href={`/projects/${projectId}/schema`}>
             <Plus className="h-3.5 w-3.5" /> Manage Schema & Tables
           </Link>
@@ -88,8 +88,9 @@ export default function CollectionsPage({ params }: { params: Promise<{ projectI
 
       <Card className="rounded-xl border shadow-xs overflow-hidden">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/40">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/40">
               <TableRow>
                 <TableHead className="text-xs font-semibold">Table Name</TableHead>
                 <TableHead className="text-xs font-semibold">Type</TableHead>
@@ -157,6 +158,7 @@ export default function CollectionsPage({ params }: { params: Promise<{ projectI
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

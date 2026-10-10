@@ -18,6 +18,9 @@ app.use("*", requestLogger);
 
 app.route("/api", appRouter);
 
+app.get("/health", (c) => c.json({ status: "ok" }));
+app.get("/api/health", (c) => c.json({ status: "ok" }));
+
 app.get("/metrics", async (c) => {
   const { metricsRouter } = await import("./routes/metrics");
   return metricsRouter.fetch(c.req.raw as any);

@@ -7,6 +7,20 @@ PostgreSQL Backend-as-a-Service. Auto-generated REST API, auth, realtime, storag
 
 ## Quick Start
 
+### One-Line Install (Docker)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/my-org/mypg/main/install.sh | bash
+```
+
+Or run the local script:
+
+```bash
+./install.sh
+```
+
+Or standard Docker Compose:
+
 ```bash
 cp .env.example .env
 docker compose up -d

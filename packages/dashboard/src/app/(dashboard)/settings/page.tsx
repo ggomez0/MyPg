@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Settings } from "lucide-react";
 
 export default function SettingsPage() {
   const [name, setName] = useState("");
@@ -12,33 +13,40 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-3xl font-bold">Admin Settings</h1>
+      <div className="pb-2 border-b">
+        <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
+          <Settings className="h-5 w-5 text-primary" /> Admin Settings
+        </h1>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Manage your administrator profile, security, and credentials
+        </p>
+      </div>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Update your admin profile details.</CardDescription>
+      <Card className="rounded-xl border shadow-xs overflow-hidden">
+        <CardHeader className="p-4 bg-muted/20 border-b">
+          <CardTitle className="text-sm font-semibold">Profile</CardTitle>
+          <CardDescription className="text-xs">Update your admin profile details.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Admin Name" />
+        <CardContent className="p-4 space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Name</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Admin Name" className="text-xs h-8" />
           </div>
-          <Button>Save Profile</Button>
+          <Button size="sm" className="h-8 text-xs w-full sm:w-auto">Save Profile</Button>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Security</CardTitle>
-          <CardDescription>Change your admin password.</CardDescription>
+      <Card className="rounded-xl border shadow-xs overflow-hidden">
+        <CardHeader className="p-4 bg-muted/20 border-b">
+          <CardTitle className="text-sm font-semibold">Security</CardTitle>
+          <CardDescription className="text-xs">Change your admin password.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>New Password</Label>
-            <Input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+        <CardContent className="p-4 space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">New Password</Label>
+            <Input type="password" value={password} onChange={e => setPassword(e.target.value)} className="text-xs h-8" />
           </div>
-          <Button variant="destructive">Update Password</Button>
+          <Button size="sm" variant="destructive" className="h-8 text-xs w-full sm:w-auto">Update Password</Button>
         </CardContent>
       </Card>
     </div>
