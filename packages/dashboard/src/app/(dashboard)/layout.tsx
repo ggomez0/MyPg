@@ -97,7 +97,7 @@ function SidebarNavigation({
         </div>
       </div>
 
-      {projectId && (
+      {projectId ? (
         <div className="p-2 border-b border-border/70 space-y-0.5">
           {navLinks.map((link) => {
             const Icon = link.icon;
@@ -118,6 +118,33 @@ function SidebarNavigation({
               </Link>
             );
           })}
+        </div>
+      ) : (
+        <div className="p-2 border-b border-border/70 space-y-0.5">
+          <Link
+            href="/projects"
+            onClick={onClose}
+            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+              pathname === "/projects"
+                ? "bg-primary/15 text-primary font-semibold border border-primary/25"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+            }`}
+          >
+            <LayoutGrid className="h-3.5 w-3.5 text-primary" />
+            <span>All Projects</span>
+          </Link>
+          <Link
+            href="/api-keys"
+            onClick={onClose}
+            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+              pathname === "/api-keys"
+                ? "bg-primary/15 text-primary font-semibold border border-primary/25"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+            }`}
+          >
+            <Key className="h-3.5 w-3.5 text-primary" />
+            <span>Apps & API Keys</span>
+          </Link>
         </div>
       )}
 

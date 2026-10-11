@@ -190,6 +190,49 @@ adminRouter.delete("/projects/:id", async (c) => {
   return c.json({ data: { success: true } });
 });
 
+adminRouter.get("/keys", async (c) => {
+  const data = await db
+    .select({
+      id: apiKeys.id,
+      projectId: apiKeys.projectId,
+      name: apiKeys.name,
+      environment: apiKeys.environment,
+      type: apiKeys.type,
+      keyPrefix: apiKeys.keyPrefix,
+      permissions: apiKeys.permissions,
+      isActive: apiKeys.isActive,
+      totalRequests: apiKeys.totalRequests,
+      createdAt: apiKeys.createdAt,
+      lastUsedAt: apiKeys.lastUsedAt,
+      projectName: projects.name,
+      projectSlug: projects.slug,
+    })
+    .from(apiKeys)
+    .leftJoin(projects, eq(apiKeys.projectId, projects.id));
+  return c.json({ data });
+});
+
+adminRouter.patch("/keys/:keyId", async (c) => {
+  const keyId = c.req.param("keyId");
+  const schema = z.object({
+    name: z.string().optional(),
+    environment: z.string().optional(),
+    type: z.string().optional(),
+    isActive: z.boolean().optional(),
+    permissions: z.any().optional(),
+    projectId: z.string().optional(),
+  });
+  const body = schema.parse(await c.req.json());
+  const [data] = await db.update(apiKeys).set(body).where(eq(apiKeys.id, keyId)).returning();
+  return c.json({ data });
+});
+
+adminRouter.delete("/keys/:keyId", async (c) => {
+  const keyId = c.req.param("keyId");
+  await db.delete(apiKeys).where(eq(apiKeys.id, keyId));
+  return c.json({ data: { success: true } });
+});
+
 adminRouter.get("/projects/:projectId/keys", async (c) => {
   const projectId = c.req.param("projectId");
   const data = await db.select().from(apiKeys).where(eq(apiKeys.projectId, projectId));

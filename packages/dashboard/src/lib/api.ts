@@ -61,13 +61,18 @@ export const api = {
     telemetry: (id: string) => fetcher(`/api/admin/projects/${id}/telemetry`),
   },
   apiKeys: {
+    listAll: () => fetcher("/api/admin/keys"),
     list: (projectId: string) => fetcher(`/api/admin/projects/${projectId}/keys`),
     create: (projectId: string, data: { name: string; environment?: string; type?: string; permissions?: object }) =>
       fetcher(`/api/admin/projects/${projectId}/keys`, { method: "POST", body: JSON.stringify(data) }),
-    update: (projectId: string, keyId: string, data: { name?: string; isActive?: boolean; environment?: string; type?: string; permissions?: object }) =>
+    update: (projectId: string, keyId: string, data: { name?: string; isActive?: boolean; environment?: string; type?: string; permissions?: object; projectId?: string }) =>
       fetcher(`/api/admin/projects/${projectId}/keys/${keyId}`, { method: "PATCH", body: JSON.stringify(data) }),
+    updateGlobal: (keyId: string, data: { name?: string; isActive?: boolean; environment?: string; type?: string; permissions?: object; projectId?: string }) =>
+      fetcher(`/api/admin/keys/${keyId}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (projectId: string, keyId: string) =>
       fetcher(`/api/admin/projects/${projectId}/keys/${keyId}`, { method: "DELETE" }),
+    deleteGlobal: (keyId: string) =>
+      fetcher(`/api/admin/keys/${keyId}`, { method: "DELETE" }),
     stats: (projectId: string, keyId: string) =>
       fetcher(`/api/admin/projects/${projectId}/keys/${keyId}/stats`),
   },

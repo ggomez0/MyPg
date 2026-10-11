@@ -51,7 +51,8 @@ export async function apiAuth(c: Context<AppEnv>, next: Next) {
         totalRequests: (keyRecord.totalRequests || 0) + 1,
       })
       .where(eq(apiKeys.id, keyRecord.id));
-    c.set("projectId", keyRecord.projectId);
+    const targetProjectId = c.req.header("X-Project-Id") || c.req.query("projectId") || keyRecord.projectId;
+    c.set("projectId", targetProjectId);
     c.set("authType", "apikey");
     c.set("apiKeyId", keyRecord.id);
     c.set("apiKeyPermissions", keyRecord.permissions);
