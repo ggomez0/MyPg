@@ -3,6 +3,9 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { config } from "./config";
 import { appRouter } from "./routes";
+import { dataRouter } from "./routes/data";
+import { realtimeRouter } from "./routes/realtime";
+import { storageRouter } from "./routes/storage";
 import { requestLogger } from "./middleware/logger";
 import { runMigrations } from "./db/migrate";
 import type { AppEnv } from "./types";
@@ -17,6 +20,9 @@ app.use("*", cors({
 app.use("*", requestLogger);
 
 app.route("/api", appRouter);
+app.route("/data", dataRouter);
+app.route("/realtime", realtimeRouter);
+app.route("/storage", storageRouter);
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 app.get("/api/health", (c) => c.json({ status: "ok" }));
