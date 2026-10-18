@@ -29,6 +29,7 @@ import {
   Database,
   Sliders,
   Filter,
+  Search,
 } from "lucide-react";
 
 function formatRelativeTime(dateString?: string | null): string {
@@ -138,6 +139,61 @@ export function ApiKeysManager({ initialProjectId }: { initialProjectId?: string
         },
       };
     });
+  };
+
+  const [createSearchTable, setCreateSearchTable] = useState("");
+  const [editSearchTable, setEditSearchTable] = useState("");
+
+  const setAllCreatePermissions = (mode: "all" | "readonly" | "readwrite" | "clear") => {
+    if (!createTables) return;
+    const next: Record<string, { read: boolean; create: boolean; update: boolean; delete: boolean }> = {};
+    for (const tbl of createTables) {
+      next[tbl.name] = {
+        read: mode !== "clear",
+        create: mode === "all" || mode === "readwrite",
+        update: mode === "all" || mode === "readwrite",
+        delete: mode === "all",
+      };
+    }
+    setSelectedCollections(next);
+  };
+
+  const setSingleCreatePermission = (tblName: string, mode: "all" | "readonly" | "readwrite" | "clear") => {
+    setSelectedCollections((prev) => ({
+      ...prev,
+      [tblName]: {
+        read: mode !== "clear",
+        create: mode === "all" || mode === "readwrite",
+        update: mode === "all" || mode === "readwrite",
+        delete: mode === "all",
+      },
+    }));
+  };
+
+  const setAllEditPermissions = (mode: "all" | "readonly" | "readwrite" | "clear") => {
+    if (!editTables) return;
+    const next: Record<string, { read: boolean; create: boolean; update: boolean; delete: boolean }> = {};
+    for (const tbl of editTables) {
+      next[tbl.name] = {
+        read: mode !== "clear",
+        create: mode === "all" || mode === "readwrite",
+        update: mode === "all" || mode === "readwrite",
+        delete: mode === "all",
+      };
+    }
+    setEditSelectedCollections(next);
+  };
+
+  const setSingleEditPermission = (tblName: string, mode: "all" | "readonly" | "readwrite" | "clear") => {
+    setEditSelectedCollections((prev) => ({
+      ...prev,
+      [tblName]: {
+        read: mode !== "clear",
+        create: mode === "all" || mode === "readwrite",
+        update: mode === "all" || mode === "readwrite",
+        delete: mode === "all",
+      },
+    }));
   };
 
   const openEditModal = (k: any) => {
@@ -410,59 +466,153 @@ export function ApiKeysManager({ initialProjectId }: { initialProjectId?: string
                 )}
 
                 {type === "custom" && (
-                  <div className="space-y-2 border rounded-xl p-3 bg-muted/20">
+                  <div className="space-y-2.5 border rounded-xl p-3 bg-muted/20">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium">Granular Table Scopes</Label>
                       <span className="text-[10px] text-muted-foreground font-mono">Select allowed actions</span>
                     </div>
 
-                    <div className="space-y-2 max-h-48 overflow-y-auto divide-y divide-border/60">
-                      {createTables?.map((tbl: any) => {
-                        const cur = selectedCollections[tbl.name] || { read: false, create: false, update: false, delete: false };
-                        return (
-                          <div key={tbl.name} className="pt-2 pb-1 space-y-1.5">
-                            <span className="font-mono text-xs font-semibold">{tbl.name}</span>
-                            <div className="flex items-center gap-3 text-xs">
-                              <label className="flex items-center gap-1 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={cur.read}
-                                  onChange={() => handleToggleCollectionAction(tbl.name, "read")}
-                                  className="rounded text-primary h-3.5 w-3.5"
-                                />
-                                <span className="text-[11px] text-muted-foreground">Read</span>
-                              </label>
-                              <label className="flex items-center gap-1 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={cur.create}
-                                  onChange={() => handleToggleCollectionAction(tbl.name, "create")}
-                                  className="rounded text-primary h-3.5 w-3.5"
-                                />
-                                <span className="text-[11px] text-muted-foreground">Create</span>
-                              </label>
-                              <label className="flex items-center gap-1 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={cur.update}
-                                  onChange={() => handleToggleCollectionAction(tbl.name, "update")}
-                                  className="rounded text-primary h-3.5 w-3.5"
-                                />
-                                <span className="text-[11px] text-muted-foreground">Update</span>
-                              </label>
-                              <label className="flex items-center gap-1 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={cur.delete}
-                                  onChange={() => handleToggleCollectionAction(tbl.name, "delete")}
-                                  className="rounded text-primary h-3.5 w-3.5"
-                                />
-                                <span className="text-[11px] text-muted-foreground">Delete</span>
-                              </label>
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[11px] px-2"
+                        onClick={() => setAllCreatePermissions("all")}
+                      >
+                        Select All
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[11px] px-2"
+                        onClick={() => setAllCreatePermissions("readonly")}
+                      >
+                        Read Only All
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[11px] px-2"
+                        onClick={() => setAllCreatePermissions("readwrite")}
+                      >
+                        Read & Write All
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-[11px] px-2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setAllCreatePermissions("clear")}
+                      >
+                        Clear All
+                      </Button>
+                    </div>
+
+                    <div className="relative">
+                      <Search className="h-3 w-3 absolute left-2 top-2 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        placeholder="Search tables..."
+                        value={createSearchTable}
+                        onChange={(e) => setCreateSearchTable(e.target.value)}
+                        className="h-7 pl-6 text-xs bg-background"
+                      />
+                    </div>
+
+                    <div className="space-y-2 max-h-52 overflow-y-auto divide-y divide-border/60">
+                      {createTables
+                        ?.filter((tbl: any) =>
+                          !createSearchTable || tbl.name.toLowerCase().includes(createSearchTable.toLowerCase())
+                        )
+                        .map((tbl: any) => {
+                          const cur = selectedCollections[tbl.name] || { read: false, create: false, update: false, delete: false };
+                          return (
+                            <div key={tbl.name} className="pt-2 pb-1 space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono text-xs font-semibold">{tbl.name}</span>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 px-1.5 text-[10px]"
+                                    onClick={() => setSingleCreatePermission(tbl.name, "all")}
+                                  >
+                                    All
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 px-1.5 text-[10px]"
+                                    onClick={() => setSingleCreatePermission(tbl.name, "readonly")}
+                                  >
+                                    Read
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 px-1.5 text-[10px]"
+                                    onClick={() => setSingleCreatePermission(tbl.name, "readwrite")}
+                                  >
+                                    R/W
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 px-1.5 text-[10px] text-muted-foreground"
+                                    onClick={() => setSingleCreatePermission(tbl.name, "clear")}
+                                  >
+                                    Clear
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs">
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={cur.read}
+                                    onChange={() => handleToggleCollectionAction(tbl.name, "read")}
+                                    className="rounded text-primary h-3.5 w-3.5"
+                                  />
+                                  <span className="text-[11px] text-muted-foreground">Read</span>
+                                </label>
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={cur.create}
+                                    onChange={() => handleToggleCollectionAction(tbl.name, "create")}
+                                    className="rounded text-primary h-3.5 w-3.5"
+                                  />
+                                  <span className="text-[11px] text-muted-foreground">Create</span>
+                                </label>
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={cur.update}
+                                    onChange={() => handleToggleCollectionAction(tbl.name, "update")}
+                                    className="rounded text-primary h-3.5 w-3.5"
+                                  />
+                                  <span className="text-[11px] text-muted-foreground">Update</span>
+                                </label>
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={cur.delete}
+                                    onChange={() => handleToggleCollectionAction(tbl.name, "delete")}
+                                    className="rounded text-primary h-3.5 w-3.5"
+                                  />
+                                  <span className="text-[11px] text-muted-foreground">Delete</span>
+                                </label>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
                     </div>
                   </div>
                 )}
@@ -782,53 +932,147 @@ export function ApiKeysManager({ initialProjectId }: { initialProjectId?: string
                   <span className="text-[10px] text-muted-foreground font-mono">Check allowed actions</span>
                 </div>
 
-                <div className="space-y-2 max-h-48 overflow-y-auto divide-y divide-border/60">
-                  {editTables?.map((tbl: any) => {
-                    const cur = editSelectedCollections[tbl.name] || { read: false, create: false, update: false, delete: false };
-                    return (
-                      <div key={tbl.name} className="pt-2 pb-1 space-y-1.5">
-                        <span className="font-mono text-xs font-semibold">{tbl.name}</span>
-                        <div className="flex items-center gap-3 text-xs">
-                          <label className="flex items-center gap-1 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={cur.read}
-                              onChange={() => handleToggleEditCollectionAction(tbl.name, "read")}
-                              className="rounded text-primary h-3.5 w-3.5"
-                            />
-                            <span className="text-[11px] text-muted-foreground">Read</span>
-                          </label>
-                          <label className="flex items-center gap-1 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={cur.create}
-                              onChange={() => handleToggleEditCollectionAction(tbl.name, "create")}
-                              className="rounded text-primary h-3.5 w-3.5"
-                            />
-                            <span className="text-[11px] text-muted-foreground">Create</span>
-                          </label>
-                          <label className="flex items-center gap-1 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={cur.update}
-                              onChange={() => handleToggleEditCollectionAction(tbl.name, "update")}
-                              className="rounded text-primary h-3.5 w-3.5"
-                            />
-                            <span className="text-[11px] text-muted-foreground">Update</span>
-                          </label>
-                          <label className="flex items-center gap-1 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={cur.delete}
-                              onChange={() => handleToggleEditCollectionAction(tbl.name, "delete")}
-                              className="rounded text-primary h-3.5 w-3.5"
-                            />
-                            <span className="text-[11px] text-muted-foreground">Delete</span>
-                          </label>
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[11px] px-2"
+                    onClick={() => setAllEditPermissions("all")}
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[11px] px-2"
+                    onClick={() => setAllEditPermissions("readonly")}
+                  >
+                    Read Only All
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[11px] px-2"
+                    onClick={() => setAllEditPermissions("readwrite")}
+                  >
+                    Read & Write All
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setAllEditPermissions("clear")}
+                  >
+                    Clear All
+                  </Button>
+                </div>
+
+                <div className="relative">
+                  <Search className="h-3 w-3 absolute left-2 top-2 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Search tables..."
+                    value={editSearchTable}
+                    onChange={(e) => setEditSearchTable(e.target.value)}
+                    className="h-7 pl-6 text-xs bg-background"
+                  />
+                </div>
+
+                <div className="space-y-2 max-h-52 overflow-y-auto divide-y divide-border/60">
+                  {editTables
+                    ?.filter((tbl: any) =>
+                      !editSearchTable || tbl.name.toLowerCase().includes(editSearchTable.toLowerCase())
+                    )
+                    .map((tbl: any) => {
+                      const cur = editSelectedCollections[tbl.name] || { read: false, create: false, update: false, delete: false };
+                      return (
+                        <div key={tbl.name} className="pt-2 pb-1 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-xs font-semibold">{tbl.name}</span>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 px-1.5 text-[10px]"
+                                onClick={() => setSingleEditPermission(tbl.name, "all")}
+                              >
+                                All
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 px-1.5 text-[10px]"
+                                onClick={() => setSingleEditPermission(tbl.name, "readonly")}
+                              >
+                                Read
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 px-1.5 text-[10px]"
+                                onClick={() => setSingleEditPermission(tbl.name, "readwrite")}
+                              >
+                                R/W
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 px-1.5 text-[10px] text-muted-foreground"
+                                onClick={() => setSingleEditPermission(tbl.name, "clear")}
+                              >
+                                Clear
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs">
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={cur.read}
+                                onChange={() => handleToggleEditCollectionAction(tbl.name, "read")}
+                                className="rounded text-primary h-3.5 w-3.5"
+                              />
+                              <span className="text-[11px] text-muted-foreground">Read</span>
+                            </label>
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={cur.create}
+                                onChange={() => handleToggleEditCollectionAction(tbl.name, "create")}
+                                className="rounded text-primary h-3.5 w-3.5"
+                              />
+                              <span className="text-[11px] text-muted-foreground">Create</span>
+                            </label>
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={cur.update}
+                                onChange={() => handleToggleEditCollectionAction(tbl.name, "update")}
+                                className="rounded text-primary h-3.5 w-3.5"
+                              />
+                              <span className="text-[11px] text-muted-foreground">Update</span>
+                            </label>
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={cur.delete}
+                                onChange={() => handleToggleEditCollectionAction(tbl.name, "delete")}
+                                className="rounded text-primary h-3.5 w-3.5"
+                              />
+                              <span className="text-[11px] text-muted-foreground">Delete</span>
+                            </label>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
               </div>
             )}

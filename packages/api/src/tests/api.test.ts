@@ -136,4 +136,20 @@ describe("MyPg Core Utilities & Security Tests", () => {
     expect(checkApiKeyPermission(null, "posts", "create")).toBe(true);
     expect(checkApiKeyPermission({ mode: "full" }, "posts", "delete")).toBe(true);
   });
+
+  it("should sort newest to oldest by default when no sort parameter is provided", () => {
+    const capturedQueries: string[] = [];
+    const sqlMock: any = (strings: any, ...values: any[]) => {
+      if (Array.isArray(strings)) {
+        capturedQueries.push(strings.join("?"));
+      }
+      return strings;
+    };
+    sqlMock.unsafe = (val: any) => val;
+
+    const allowedColumns = ["id", "title", "created_at"];
+    const result = buildQuery(sqlMock, "items", {}, allowedColumns);
+    expect(result.dataQuery).toBeDefined();
+    expect(capturedQueries.some((q) => q.includes("ORDER BY") && q.includes("DESC"))).toBe(true);
+  });
 });

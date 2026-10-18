@@ -22,6 +22,7 @@ import {
   Search,
   Filter,
   X,
+  Eye,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -36,29 +37,12 @@ export default function CollectionDataPage({
 
   const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [showColumnFilters, setShowColumnFilters] = useState(false);
-
-  const queryParams = useMemo(() => {
-    const params: Record<string, string> = { page: String(page), perPage: "50" };
-    if (sortField) {
-      params.sort = `${sortField}:${sortOrder}`;
-    }
-    const filterObj: Record<string, any> = {};
-    for (const [k, v] of Object.entries(columnFilters)) {
-      if (v) filterObj[k] = { like: `%${v}%` };
-    }
-    if (Object.keys(filterObj).length > 0) {
-      params.filter = JSON.stringify(filterObj);
-    }
-    return params;
-  }, [page, sortField, sortOrder, columnFilters]);
-
-  const { data: records, isLoading, refetch } = useQuery({
-    queryKey: ["data", projectId, name, queryParams],
-    queryFn: () => api.data.list(projectId, name, queryParams),
-  });
+  const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>({});
+  const [columnsDialogOpen, setColumnsDialogOpen] = useState(false);
+  const [columnSearch, setColumnSearch] = useState("");
 
   const { data: tables } = useQuery({
     queryKey: ["schema", projectId],
@@ -68,28 +52,76 @@ export default function CollectionDataPage({
   const tableSchema = tables?.find((t: any) => t.name === name);
   const schemaColumns = tableSchema?.columns || [];
 
+  const defaultSortField = useMemo(() => {
+    const candidateNames = schemaColumns.length > 0 ? schemaColumns.map((c: any) => c.name as string) : [];
+    return ["created_at", "createdAt", "inserted_at", "updated_at", "timestamp", "id"].find((c) => candidateNames.includes(c)) || null;
+  }, [schemaColumns]);
+
+  const activeSortField = sortField !== null ? sortField : defaultSortField;
+  const activeSortOrder = sortField !== null ? sortOrder : "desc";
+
+  const queryParams = useMemo(() => {
+    const params: Record<string, string> = { page: String(page), perPage: "50" };
+    if (activeSortField) {
+      params.sort = `${activeSortField}:${activeSortOrder}`;
+    }
+    const filterObj: Record<string, any> = {};
+    for (const [k, v] of Object.entries(columnFilters)) {
+      if (v) filterObj[k] = { like: `%${v}%` };
+    }
+    if (Object.keys(filterObj).length > 0) {
+      params.filter = JSON.stringify(filterObj);
+    }
+    return params;
+  }, [page, activeSortField, activeSortOrder, columnFilters]);
+
+  const { data: records, isLoading, refetch } = useQuery({
+    queryKey: ["data", projectId, name, queryParams],
+    queryFn: () => api.data.list(projectId, name, queryParams),
+  });
+
   const [createOpen, setCreateOpen] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [editingRecord, setEditingRecord] = useState<any | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const cols: string[] =
-    schemaColumns.length > 0
-      ? schemaColumns.map((c: any) => c.name as string)
-      : records && records.length > 0
-      ? Object.keys(records[0])
-      : [];
+  const cols: string[] = useMemo(() => {
+    if (schemaColumns.length > 0) {
+      return schemaColumns.map((c: any) => c.name as string);
+    }
+    if (records && records.length > 0) {
+      return Object.keys(records[0]);
+    }
+    return [];
+  }, [schemaColumns, records]);
+
+  const visibleCols = useMemo(() => cols.filter((c) => !hiddenColumns[c]), [cols, hiddenColumns]);
+
+  const toggleColumn = (col: string) => {
+    setHiddenColumns((prev) => ({ ...prev, [col]: !prev[col] }));
+  };
+
+  const showAllColumns = () => setHiddenColumns({});
+  const hideAllColumns = () => {
+    const next: Record<string, boolean> = {};
+    cols.forEach((c) => {
+      if (c !== "id") next[c] = true;
+    });
+    setHiddenColumns(next);
+  };
 
   const handleSort = (field: string) => {
-    if (sortField === field) {
-      if (sortOrder === "asc") setSortOrder("desc");
-      else {
-        setSortField(null);
+    if (activeSortField === field) {
+      if (activeSortOrder === "desc") {
         setSortOrder("asc");
+        setSortField(field);
+      } else {
+        setSortField(field === defaultSortField ? field : null);
+        setSortOrder("desc");
       }
     } else {
       setSortField(field);
-      setSortOrder("asc");
+      setSortOrder("desc");
     }
     setPage(1);
   };
@@ -107,6 +139,7 @@ export default function CollectionDataPage({
   const clearAllFilters = () => {
     setColumnFilters({});
     setSortField(null);
+    setSortOrder("desc");
     setPage(1);
   };
 
@@ -215,6 +248,79 @@ export default function CollectionDataPage({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Dialog open={columnsDialogOpen} onOpenChange={setColumnsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                <Eye className="h-3.5 w-3.5" />
+                <span>Columns</span>
+                <span className="text-[10px] font-mono px-1 py-0.5 rounded bg-muted/60">
+                  {visibleCols.length}/{cols.length}
+                </span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[95vw] sm:max-w-sm max-h-[80vh] overflow-y-auto p-4 sm:p-5">
+              <DialogHeader>
+                <DialogTitle className="text-sm font-semibold flex items-center justify-between">
+                  <span>Toggle Columns</span>
+                  <div className="flex gap-1 font-normal">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[11px] px-2"
+                      onClick={showAllColumns}
+                    >
+                      Show All
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[11px] px-2 text-muted-foreground hover:text-foreground"
+                      onClick={hideAllColumns}
+                    >
+                      Hide All
+                    </Button>
+                  </div>
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-3 mt-3">
+                <div className="relative">
+                  <Search className="h-3.5 w-3.5 absolute left-2 top-2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search columns..."
+                    value={columnSearch}
+                    onChange={(e) => setColumnSearch(e.target.value)}
+                    className="h-7 pl-6 text-xs bg-background"
+                  />
+                </div>
+
+                <div className="space-y-1 max-h-60 overflow-y-auto divide-y divide-border/40">
+                  {cols
+                    .filter((c) => !columnSearch || c.toLowerCase().includes(columnSearch.toLowerCase()))
+                    .map((c) => {
+                      const isVisible = !hiddenColumns[c];
+                      return (
+                        <label
+                          key={c}
+                          className="flex items-center justify-between py-1.5 px-1 cursor-pointer hover:bg-muted/40 rounded text-xs select-none"
+                        >
+                          <span className="font-mono text-foreground truncate max-w-[200px]">{c}</span>
+                          <input
+                            type="checkbox"
+                            checked={isVisible}
+                            onChange={() => toggleColumn(c)}
+                            className="rounded text-primary h-3.5 w-3.5 cursor-pointer"
+                          />
+                        </label>
+                      );
+                    })}
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Button
             variant={showColumnFilters ? "secondary" : "outline"}
             size="sm"
@@ -300,8 +406,8 @@ export default function CollectionDataPage({
             <Table>
               <TableHeader className="bg-muted/40">
                 <TableRow>
-                  {cols.map((c) => {
-                    const isSorted = sortField === c;
+                  {visibleCols.map((c) => {
+                    const isSorted = activeSortField === c;
                     return (
                       <TableHead key={c} className="font-mono text-xs whitespace-nowrap py-2 px-3">
                         <button
@@ -310,7 +416,7 @@ export default function CollectionDataPage({
                         >
                           <span>{c}</span>
                           {isSorted ? (
-                            sortOrder === "asc" ? (
+                            activeSortOrder === "asc" ? (
                               <ArrowUp className="h-3.5 w-3.5 text-primary" />
                             ) : (
                               <ArrowDown className="h-3.5 w-3.5 text-primary" />
@@ -327,7 +433,7 @@ export default function CollectionDataPage({
 
                 {showColumnFilters && (
                   <TableRow className="bg-muted/60 border-b">
-                    {cols.map((c) => (
+                    {visibleCols.map((c) => (
                       <TableHead key={`filter-${c}`} className="p-1.5">
                         <Input
                           placeholder={`Filter ${c}...`}
@@ -356,14 +462,25 @@ export default function CollectionDataPage({
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={cols.length + 1} className="text-center py-10 text-muted-foreground text-xs">
+                    <TableCell colSpan={visibleCols.length + 1} className="text-center py-10 text-muted-foreground text-xs">
                       Loading records...
+                    </TableCell>
+                  </TableRow>
+                ) : visibleCols.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={1} className="text-center py-12 text-muted-foreground">
+                      <Eye className="h-8 w-8 mx-auto mb-2 opacity-30 text-primary" />
+                      <p className="font-medium text-foreground text-sm">All columns are currently hidden</p>
+                      <p className="text-xs mt-1">Click &ldquo;Columns&rdquo; above to select columns to display.</p>
+                      <Button variant="outline" size="sm" className="mt-3 h-7 text-xs" onClick={showAllColumns}>
+                        Show All Columns
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ) : filteredAndSortedRecords.length > 0 ? (
                   filteredAndSortedRecords.map((r: any, i: number) => (
                     <TableRow key={r.id || i} className="hover:bg-muted/30">
-                      {cols.map((c) => (
+                      {visibleCols.map((c) => (
                         <TableCell key={c} className="max-w-[260px] truncate text-xs font-mono py-2.5 px-3">
                           {r[c] === null ? (
                             <span className="text-muted-foreground/50 italic">null</span>
@@ -393,7 +510,7 @@ export default function CollectionDataPage({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={cols.length + 1} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={visibleCols.length + 1} className="text-center py-12 text-muted-foreground">
                       <p className="font-medium text-foreground text-sm">No records match your filters</p>
                       <p className="text-xs mt-1">Try adjusting your search criteria or insert a new record.</p>
                     </TableCell>

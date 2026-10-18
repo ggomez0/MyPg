@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { db, getDataDb } from "../db";
 import { config } from "../config";
 import { projects, apiKeys, requestLogs } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, gte, or, inArray } from "drizzle-orm";
 import { adminAuth } from "../middleware/auth";
 import { z } from "zod";
 import { generateApiKey, hashPassword } from "../utils/crypto";
@@ -452,6 +452,66 @@ adminRouter.get("/projects/:projectId/telemetry", async (c) => {
   const tableLastHourMap = new Map<string, number>();
   const tableErrorMap = new Map<string, number>();
 
+  let totalProjectApiRequests = 0;
+  try {
+    const projKeys = await db
+      .select({ id: apiKeys.id })
+      .from(apiKeys)
+      .where(eq(apiKeys.projectId, projectId));
+    const keyIds = projKeys.map((k) => k.id);
+
+    const baseProjectCondition = keyIds.length > 0
+      ? or(eq(requestLogs.projectId, projectId), inArray(requestLogs.apiKeyId, keyIds))!
+      : eq(requestLogs.projectId, projectId);
+
+    const [{ totalCount }] = await db
+      .select({ totalCount: db.$count(requestLogs) })
+      .from(requestLogs)
+      .where(baseProjectCondition);
+    totalProjectApiRequests = Number(totalCount) || 0;
+
+    const oneHourAgoDate = new Date(Date.now() - 3600 * 1000);
+    const recentApiLogs = await db
+      .select()
+      .from(requestLogs)
+      .where(and(baseProjectCondition, gte(requestLogs.createdAt, oneHourAgoDate)));
+
+    lastHourRequests += recentApiLogs.length;
+
+    for (const log of recentApiLogs) {
+      let matchedTable = "";
+      for (const t of tableRows) {
+        if (
+          log.path.includes(`/${t.table_name}/`) ||
+          log.path.endsWith(`/${t.table_name}`) ||
+          log.path.includes(`collection=${t.table_name}`)
+        ) {
+          matchedTable = t.table_name;
+          break;
+        }
+      }
+
+      if (matchedTable) {
+        tableLastHourMap.set(matchedTable, (tableLastHourMap.get(matchedTable) || 0) + 1);
+      }
+
+      if (log.statusCode >= 400) {
+        totalErrors++;
+        if (matchedTable) {
+          tableErrorMap.set(matchedTable, (tableErrorMap.get(matchedTable) || 0) + 1);
+        }
+        if (recentErrors.length < 50) {
+          recentErrors.push({
+            timestamp: log.createdAt ? log.createdAt.toISOString().replace("T", " ").substring(0, 19) : "",
+            error: `HTTP ${log.statusCode} on ${log.method} ${log.path}`,
+            table: matchedTable || "api",
+            pid: 0,
+          });
+        }
+      }
+    }
+  } catch {}
+
   const logFilePath = config.POSTGRES_LOG_FILE;
   if (fs.existsSync(logFilePath)) {
     try {
@@ -561,7 +621,7 @@ adminRouter.get("/projects/:projectId/telemetry", async (c) => {
     };
   }).sort((a, b) => b.totalOperations - a.totalOperations);
 
-  const totalOpsSum = tableStats.reduce((acc, curr) => acc + curr.totalOperations, 0);
+  const totalOpsSum = Math.max(tableStats.reduce((acc, curr) => acc + curr.totalOperations, 0), totalProjectApiRequests);
 
   return c.json({
     data: {

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import Link from "next/link";
-import { Plus, Database, ArrowRight, Layers, EyeOff, Eye, RefreshCw, Search, ShieldCheck } from "lucide-react";
+import { Plus, Database, ArrowRight, Layers, EyeOff, Eye, RefreshCw, Search, ShieldCheck, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useState } from "react";
@@ -150,6 +150,13 @@ export default function ProjectsPage() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button asChild variant="outline" size="sm" className="h-8 text-xs gap-1.5 shrink-0">
+            <Link href="/api-keys">
+              <Key className="h-3.5 w-3.5 text-primary" />
+              Apps & API Keys
+            </Link>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"

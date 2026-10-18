@@ -55,6 +55,14 @@ export function buildQuery(
       });
       orderBy = sql`ORDER BY ${orderParts.reduce((acc: any, curr: any, i: number) => i === 0 ? curr : sql`${acc}, ${curr}`, sql``)}`;
     }
+  } else {
+    const defaultSortCol = ["created_at", "createdAt", "inserted_at", "updated_at", "timestamp", "id"].find((c) =>
+      allowedColumns.includes(c)
+    );
+    if (defaultSortCol) {
+      const safeCol = sql(sanitizeIdentifier(defaultSortCol));
+      orderBy = sql`ORDER BY ${safeCol} DESC`;
+    }
   }
 
   const page = Math.max(1, parseInt(query.page as string) || 1);
