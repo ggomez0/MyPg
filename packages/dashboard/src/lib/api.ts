@@ -23,6 +23,16 @@ async function fetcher(endpoint: string, options: RequestInit = {}) {
     headers,
   });
 
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("mypg_admin_token");
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login";
+      }
+    }
+    throw new Error("Unauthorized");
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || "An error occurred");

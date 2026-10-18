@@ -96,12 +96,14 @@ export function ApiKeysManager({ initialProjectId }: { initialProjectId?: string
   const [snippetApp, setSnippetApp] = useState<any | null>(null);
 
   useEffect(() => {
-    if (allProjects && allProjects.length > 0 && !createProjectId) {
-      setCreateProjectId(initialProjectId || allProjects[0].id);
+    const list = Array.isArray(allProjects) ? allProjects : [];
+    if (list.length > 0 && !createProjectId) {
+      setCreateProjectId(initialProjectId || list[0].id);
     }
   }, [allProjects, initialProjectId, createProjectId]);
 
-  const activeCreateProj = createProjectId || initialProjectId || (allProjects && allProjects[0]?.id) || "";
+  const projectsList = Array.isArray(allProjects) ? allProjects : [];
+  const activeCreateProj = createProjectId || initialProjectId || projectsList[0]?.id || "";
 
   const { data: createTables } = useQuery({
     queryKey: ["schemaTables", activeCreateProj],
@@ -333,9 +335,10 @@ export function ApiKeysManager({ initialProjectId }: { initialProjectId?: string
     setTimeout(() => setter(false), 2000);
   };
 
-  const keys = (allKeys || []).filter((k: any) => projectFilter === "all" || k.projectId === projectFilter);
-  const totalRequestsSum = (allKeys || []).reduce((acc: number, k: any) => acc + (parseInt(k.totalRequests || "0") || 0), 0) || 0;
-  const activeAppsCount = (allKeys || []).filter((k: any) => k.isActive !== false).length || 0;
+  const keysList = Array.isArray(allKeys) ? allKeys : [];
+  const keys = keysList.filter((k: any) => projectFilter === "all" || k.projectId === projectFilter);
+  const totalRequestsSum = keysList.reduce((acc: number, k: any) => acc + (parseInt(k.totalRequests || "0") || 0), 0) || 0;
+  const activeAppsCount = keysList.filter((k: any) => k.isActive !== false).length || 0;
 
   return (
     <div className="space-y-6">
@@ -362,8 +365,8 @@ export function ApiKeysManager({ initialProjectId }: { initialProjectId?: string
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Databases ({allKeys?.length || 0})</SelectItem>
-                {allProjects?.map((p: any) => (
+                <SelectItem value="all">All Databases ({keysList.length})</SelectItem>
+                {projectsList.map((p: any) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
                   </SelectItem>
@@ -637,9 +640,9 @@ export function ApiKeysManager({ initialProjectId }: { initialProjectId?: string
             </div>
           </CardHeader>
           <CardContent className="p-4 pt-2">
-            <div className="text-2xl font-bold">{allKeys?.length || 0}</div>
+            <div className="text-2xl font-bold">{keysList.length}</div>
             <p className="text-[11px] text-muted-foreground mt-1">
-              {activeAppsCount} active • {(allKeys?.length || 0) - activeAppsCount} paused
+              {activeAppsCount} active • {keysList.length - activeAppsCount} paused
             </p>
           </CardContent>
         </Card>
