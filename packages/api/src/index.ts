@@ -13,7 +13,14 @@ import type { AppEnv } from "./types";
 const app = new Hono<AppEnv>();
 
 app.use("*", cors({
-  origin: config.CORS_ORIGINS.split(",").map(s => s.trim()),
+  origin: (origin) => {
+    if (!origin) return "*";
+    const list = config.CORS_ORIGINS.split(",").map(s => s.trim());
+    if (list.includes("*")) {
+      return origin;
+    }
+    return list.includes(origin) ? origin : null;
+  },
   allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   exposeHeaders: ["Content-Type", "Authorization", "X-API-Key"]
 }));
@@ -48,4 +55,3 @@ async function start() {
 start();
 
 export default app;
-
