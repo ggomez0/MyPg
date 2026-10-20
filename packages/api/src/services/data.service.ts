@@ -2,6 +2,8 @@ import { db, getDataDb } from "../db";
 import { collections, permissions, projects } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { buildQuery, sanitizeIdentifier } from "../utils/query-builder";
+import * as fs from "fs";
+import * as path from "path";
 
 export class DataService {
   static async getProjectAndDb(projectId: string) {
@@ -33,6 +35,50 @@ export class DataService {
     return cols.map((c: any) => c.column_name);
   }
 
+  static processPhoto(tableName: string, cols: string[], id: string, data: any) {
+    if (tableName === "curriculums" || cols.includes("photo_url")) {
+      const photoVal = data.photo_url !== undefined ? data.photo_url : data.photo;
+      if (photoVal === null) {
+        data.photo_url = null;
+        return;
+      }
+      if (typeof photoVal === "string") {
+        if (photoVal.startsWith("data:image/")) {
+          try {
+            const uploadsDir = path.resolve(process.cwd(), "uploads", "photos");
+            if (!fs.existsSync(uploadsDir)) {
+              fs.mkdirSync(uploadsDir, { recursive: true });
+            }
+            const matches = photoVal.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+            if (matches) {
+              const ext = matches[1] === "jpeg" ? "jpg" : matches[1];
+              const recordId = id || data.id || Math.random().toString(36).substring(2, 10);
+              const fileName = `${recordId}.${ext}`;
+              const filePath = path.join(uploadsDir, fileName);
+              fs.writeFileSync(filePath, Buffer.from(matches[2], "base64"));
+              data.photo_url = `/uploads/photos/${fileName}`;
+            }
+          } catch (err) {
+            console.error("Error saving photo from base64:", err);
+          }
+        } else if (photoVal.startsWith("/uploads/")) {
+          data.photo_url = photoVal;
+        } else if (photoVal.startsWith("http://") || photoVal.startsWith("https://")) {
+          try {
+            const parsed = new URL(photoVal);
+            if (parsed.pathname.startsWith("/uploads/")) {
+              data.photo_url = parsed.pathname;
+            } else {
+              data.photo_url = photoVal;
+            }
+          } catch {
+            data.photo_url = photoVal;
+          }
+        }
+      }
+    }
+  }
+
   static async list(projectId: string, tableName: string, queryParams: any, role: string, userId?: string) {
     const { sql } = await this.getProjectAndDb(projectId);
     const meta = await this.getCollectionMeta(projectId, tableName);
@@ -47,6 +93,12 @@ export class DataService {
 
     const { dataQuery, countQuery, page, perPage } = buildQuery(sql, tableName, queryParams, cols);
     const [records, [{ count }]] = await Promise.all([dataQuery, countQuery]);
+
+    records.forEach((r: any) => {
+      if (r.photo_url && !r.photo) {
+        r.photo = r.photo_url;
+      }
+    });
 
     const totalCount = parseInt(count);
     return { records, totalCount, page, perPage, totalPages: Math.ceil(totalCount / perPage) };
@@ -63,12 +115,17 @@ export class DataService {
     }
 
     const cols = await this.getColumns(sql, tableName);
+    this.processPhoto(tableName, cols, data.id || "", data);
+
     const safeData: any = {};
     for (const key of Object.keys(data)) {
       if (cols.includes(key)) safeData[sanitizeIdentifier(key)] = data[key];
     }
     const safeTable = sql(sanitizeIdentifier(tableName));
     const [record] = await sql`INSERT INTO ${safeTable} ${sql(safeData)} RETURNING *`;
+    if (record && record.photo_url && !record.photo) {
+      record.photo = record.photo_url;
+    }
     return record;
   }
 
@@ -79,6 +136,8 @@ export class DataService {
     if (!can) throw new Error("Forbidden");
 
     const cols = await this.getColumns(sql, tableName);
+    this.processPhoto(tableName, cols, id, data);
+
     const safeData: any = {};
     for (const key of Object.keys(data)) {
       if (cols.includes(key)) safeData[sanitizeIdentifier(key)] = data[key];
@@ -89,6 +148,9 @@ export class DataService {
       query = sql`UPDATE ${safeTable} SET ${sql(safeData)} WHERE id = ${id} AND user_id = ${userId}`;
     }
     const [record] = await sql`${query} RETURNING *`;
+    if (record && record.photo_url && !record.photo) {
+      record.photo = record.photo_url;
+    }
     return record;
   }
 

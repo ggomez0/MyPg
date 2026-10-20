@@ -1,4 +1,5 @@
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { config } from "./config";
@@ -25,6 +26,8 @@ app.use("*", cors({
   exposeHeaders: ["Content-Type", "Authorization", "X-API-Key"]
 }));
 app.use("*", requestLogger);
+
+app.use("/uploads/*", serveStatic({ root: "./" }));
 
 app.route("/api", appRouter);
 app.route("/data", dataRouter);
