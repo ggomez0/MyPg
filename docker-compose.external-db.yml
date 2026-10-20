@@ -17,6 +17,7 @@ services:
       - postgres_default
     volumes:
       - uploads:/app/uploads
+      - uploads:/app/packages/api/uploads
       - /var/lib/docker/containers/2447d76ed610c3b42a34dec132810956db2d3c7156c41a3a0ac957e07166df30/2447d76ed610c3b42a34dec132810956db2d3c7156c41a3a0ac957e07166df30-json.log:/var/log/postgres/postgres.log:ro
 
   dashboard:
